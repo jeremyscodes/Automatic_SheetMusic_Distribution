@@ -1,3 +1,7 @@
+# pip install -r requirements.txt
+#To run from cmd terminal: python prog2.py
+
+
 # So Far: 
 # 1. Reads google survey csv, to get email address_ instrument mapping
 # 2. Reads zip file, to get extract instrument names from pdf titles
@@ -79,6 +83,7 @@ csv_instrument_mapping = None  # Variable to hold the instrument mapping from CS
 
 def import_csv(button):
     global csv_instrument_mapping
+
     filepath = get_updated_csv()
     if filepath:
         csv_instrument_mapping = parse_csv(filepath)
@@ -86,10 +91,27 @@ def import_csv(button):
             for email, instrument in csv_instrument_mapping.items():
                 print(f"Email: {email}, Instrument: {instrument}")
             # You can do further processing with the parsed data here
-        button.config(background='#90EE90')
+        # button.config(background='#90EE90')
+        button.config(highlightbackground='#90EE90') 
         return csv_instrument_mapping
     else:
         print(filepath)
+
+def loading_task(fetch_button):
+    # Display a loading indication (you can use a label or any other method)
+    fetch_button.config(highlightbackground="#e5ed4e") #yellow
+    print("Loading...")
+
+# Function to start the import process in a separate thread
+def start_import(button):
+
+    loading_thread = threading.Thread(target=lambda: loading_task(button))
+
+    import_thread = threading.Thread(target=import_csv, args=(button,))
+    
+    loading_thread.start()  # Start the loading indication thread
+    import_thread.start()  # Start the CSV import thread
+
 
 import re
 instrument_list = ['violin', 'viola', 'cello','cellos', 'contrabass', 'basses','bass guitar', 'bass trombone',
@@ -235,7 +257,9 @@ def upload_sheet_music(music_button,mail_button):
             # print("email_pdf_dict:   " ,email_pdf_dict)
     else:
         print("Please import CSV first.")
-    music_button.config(background="#90EE90")
+    if email_pdf_dict:
+        # music_button.config(background="#90EE90")
+        music_button.config(highlightbackground="#90EE90")
 
 import zipfile
 import os
@@ -253,8 +277,8 @@ def extract_pdfs_from_zip(zip_path):
     return pdf_files
 
 import yagmail
-email_sender = 'jyosheetmusic@gmail.com'
-yag = yagmail.SMTP('jyosheetmusic@gmail.com', email_password)
+
+yag = yagmail.SMTP(email_sender, email_password)
 
 
 
@@ -395,8 +419,8 @@ def send_emails(button):
                     output_text.insert(tk.END, "\nEmails Sent Successfully\n")
 
             check_email_thread()
-            button.after(100, lambda: button.config(background='#90EE90'))
-
+            button.after(100, lambda: button.config(highlightbackground='#90EE90'))
+            # button.after(100, lambda: button.config(background='#90EE90'))
 
         mini_send_button = tk.Button(window, text="Next", command=show_email)
         mini_send_button.pack()
@@ -453,6 +477,14 @@ root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenhe
 import tkinter as tk
 from tkinter import ttk  # ttk is tkinter's themed widget library
 
+# Function to update button size based on window size
+def update_button_size(event):
+    button_width = root.winfo_width() // 40  # Adjust based on the desired ratio
+    button_height = root.winfo_height() // 200  # Adjust based on the desired ratio
+    import_button.config(width=button_width, height=button_height)
+    upload_button.config(width=button_width, height=button_height)
+    send_button.config(width=button_width, height=button_height)
+
 # Create a style object
 style = ttk.Style()
 
@@ -463,31 +495,28 @@ style.configure("TButton",
                 font=("Helvetica", 16, "bold"),
                 padding=10)
 
-style.configure("TLabel",
-                foreground="midnight blue",
-                background="white",
-                font=("Helvetica", 24, "bold"),
-                padding=10)
+# style.configure("TLabel",
+#                 foreground="midnight blue",
+#                 background="white",
+#                 font=("Helvetica", 24, "bold"),
+#                 padding=10)
 
 # Create a frame to hold the buttons
 frame = ttk.Frame(root, padding="10 10 10 10")
 frame.pack(fill=tk.BOTH, expand=True)
 
-# Heading
-heading = ttk.Label(frame, text="Sheet Music Distributor")
-heading.grid(column=0, row=0, padx=10, pady=10)
 
 # Button to import CSV
-import_button = tk.Button(frame, text="Fetch Updated Form Responses", command=lambda: import_csv(import_button),height=3, width=40,font=('Helvetica', '20'))
-import_button.grid(column=0, row=1, padx=10, pady=10)
+import_button = tk.Button(frame, text="Fetch Updated Form Responses", command=lambda: start_import(import_button),font=('Helvetica', '20'))
+import_button.grid(column=0, row=0, padx=10, pady=10)
 
 # Button to upload sheet music
-upload_button = tk.Button(frame, text="Upload Sheet Music", command=lambda: upload_sheet_music(upload_button,send_button), height=3, width=40, font=('Helvetica', '20'))
-upload_button.grid(column=0, row=2, padx=10, pady=10)
+upload_button = tk.Button(frame, text="Upload Sheet Music", command=lambda: upload_sheet_music(upload_button,send_button), font=('Helvetica', '20'))
+upload_button.grid(column=0, row=1, padx=10, pady=10)
 
 # Button to send emails
-send_button = tk.Button(frame, text="Send Emails", command=lambda: send_emails(send_button), height=3, width=40, font=('Helvetica', '20'))
-send_button.grid(column=0, row=3, padx=10, pady=10)
+send_button = tk.Button(frame, text="Send Emails", command=lambda: send_emails(send_button),  font=('Helvetica', '20'))
+send_button.grid(column=0, row=2, padx=10, pady=10)
 
 # Query default background and foreground colors
 default_bg_color = send_button.cget("background")
@@ -506,6 +535,8 @@ tooltip = ToolTip(help_button, "1) Click 'Import CSV to get the up-to-date email
 help_button.bind("<Enter>", lambda e: tooltip.show_tooltip())
 help_button.bind("<Leave>", lambda e: tooltip.hide_tooltip())
 
+
+root.bind("<Configure>", update_button_size)
 
 # Make the grid columns and rows expand when the window is resized
 frame.columnconfigure(0, weight=1)
